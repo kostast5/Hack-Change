@@ -1,4 +1,4 @@
-"""разбиение markdown-документов по заголовкам"""
+"""Разбиение markdown-документов по заголовкам."""
 import re
 from pathlib import Path
 
@@ -6,6 +6,11 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 
 
 def split_markdown(text: str, path: str) -> list[dict]:
+    """Разбивает markdown на чанки по заголовкам.
+
+    Каждый чанк содержит путь файла, заголовок раздела, уровень и текст.
+    Текст перед первым заголовком попадает в чанк с заголовком "".
+    """
     chunks = []
     matches = list(HEADING_RE.finditer(text))
     if not matches:
@@ -13,6 +18,7 @@ def split_markdown(text: str, path: str) -> list[dict]:
             chunks.append({"path": path, "heading": "", "level": 0, "text": text.strip()})
         return chunks
 
+    # текст до первого заголовка
     first_start = matches[0].start()
     preamble = text[:first_start].strip()
     if preamble:
@@ -24,6 +30,7 @@ def split_markdown(text: str, path: str) -> list[dict]:
         start = m.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         body = text[start:end].strip()
+        # включаем сам заголовок в текст чанка для поиска
         full = (heading + "\n" + body).strip() if body else heading
         chunks.append({"path": path, "heading": heading, "level": level, "text": full})
 
@@ -31,6 +38,7 @@ def split_markdown(text: str, path: str) -> list[dict]:
 
 
 def load_chunks_from_dir(root: str) -> list[dict]:
+    """Собирает чанки из всех .md/.txt в каталоге (рекурсивно)."""
     root_path = Path(root)
     chunks = []
     for p in sorted(root_path.rglob("*")):

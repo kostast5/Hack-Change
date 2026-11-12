@@ -44,6 +44,7 @@ def to_sources(results, quote_len: int = 240) -> list[Source]:
 
 
 def search(question: str, chunks: list[dict], history: str = "", top_k: int = 8) -> list[Source]:
+    """Поиск релевантных чанков с учётом роутера и истории."""
     from router import route
     allowed = set(route(question, history))
     filtered = [c for c in chunks if c["path"] in allowed]

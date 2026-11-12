@@ -1,6 +1,8 @@
 """Роутер по карте продуктов: задача клиента -> файл(ы) продукта."""
 import re
 
+# Ключевые слова -> релевантные файлы базы знаний.
+# Источник: 00-reference/00-product-map.md
 ROUTES = [
     {
         "name": "Выход на оптовый рынок",
@@ -52,6 +54,7 @@ ROUTES = [
     },
 ]
 
+# Общие файлы, полезные почти всегда.
 COMMON_FILES = [
     "00-reference/00-product-map.md",
     "00-reference/02-product-scope-and-limits.md",
@@ -65,11 +68,13 @@ def _norm(text: str) -> str:
 
 
 def route(question: str, history: str = "") -> list[str]:
+    """Возвращает список релевантных путей файлов (продуктовые + общие)."""
     q = _norm(question + " " + history)
     chosen: set[str] = set()
     for r in ROUTES:
         if any(kw in q for kw in r["keywords"]):
             chosen.update(r["files"])
+    # Если ничего не распознали — ищем по всем продуктам (fallback).
     if not chosen:
         chosen.update(f["files"][0] for f in ROUTES if f["files"])
     # Добавляем общие файлы.
