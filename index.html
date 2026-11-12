@@ -608,14 +608,13 @@ cat > README.md <<'EOF'
 - infrastructure: HTTP-шлюз, заглушка, localStorage
 - presentation: отрисовка DOM
 - main.js: сборка зависимостей
-  
+
 ## Подключение consult()
 Положите solution.py рядом с server.py. Контракт ответа /api/consult:
-{ answer, sources: [{path, title, quote, score}], lead: null | {fio, phone, company, summary} }
+{ answer, sources: [{path, title, quote, score}], lead: null | {fio, phone, company, summary} 
 EOF
 
 find . -type f | sort
 for f in $(find src -name '*.js'); do node --check $f || echo FAIL $f; done
 python3 -c "import ast;ast.parse(open('server.py').read())" && echo ALL_OK
-
-{"returncode":0,"stdout":"./README.md\n./index.html\n./server.py\n./src/application/chatService.js\n./src/config.js\n./src/domain/demos.js\n./src/domain/session.js\n./src/infrastructure/fallbackConsultGateway.js\n./src/infrastructure/httpConsultGateway.js\n./src/infrastructure/localStorageRepository.js\n./src/infrastructure/mockConsultGateway.js\n./src/main.js\n./src/presentation/chatView.js\n./src/presentation/composer.js\n./src/presentation/debugPanel.js\n./src/presentation/dom.js\n./src/presentation/historyView.js\n./src/presentation/leadCard.js\n./styles/components.css\n./styles/layout.css\n./styles/tokens.css\nALL_OK\n","stderr":""}
+  
