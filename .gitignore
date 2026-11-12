@@ -1,0 +1,21 @@
+# Данные кейса — не публикуем (условия кейса)
+knowledge-base/
+knowledge-base.zip
+kb.zip
+*.pdf
+demo_questions.csv
+demo_output.csv
+questions.csv
+
+# Результаты прогонов
+submission.csv
+сверка.txt
+
+# Секреты
+.env
+
+# Служебное
+__pycache__/
+.DS_Store
+.venv/
+venv/
