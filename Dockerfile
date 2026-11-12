@@ -8,9 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-web.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-web.txt
 
-COPY solution.py consult.py consultant.py prompt.txt contract.py dialogue.py chunks.py retrieve.py llm.py config.py README.md ./
+COPY solution.py consult.py consultant.py prompt.txt contract.py dialogue.py chunks.py retrieve.py llm.py config.py server.py README.md index.html ./
+COPY src ./src
+COPY styles ./styles
 
 CMD ["python", "-u", "solution.py"]
