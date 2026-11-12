@@ -13,7 +13,6 @@ def split_markdown(text: str, path: str) -> list[dict]:
             chunks.append({"path": path, "heading": "", "level": 0, "text": text.strip()})
         return chunks
 
-    # текст до первого заголовка
     first_start = matches[0].start()
     preamble = text[:first_start].strip()
     if preamble:
@@ -25,7 +24,6 @@ def split_markdown(text: str, path: str) -> list[dict]:
         start = m.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         body = text[start:end].strip()
-        # включаем сам заголовок в текст чанка для поиска
         full = (heading + "\n" + body).strip() if body else heading
         chunks.append({"path": path, "heading": heading, "level": level, "text": full})
 
