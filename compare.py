@@ -1,11 +1,22 @@
 # Сверка перед сабмитом: кладём рядом вопрос, образец и ответ бота.
-# Запуск: python3 compare.py (рядом должны быть demo_questions.csv,
-# demo_output.csv и submission.csv). Результат - файл сверка.txt.
+# Запуск из корня проекта: python compare.py
+# Результат — файл сверка.txt. В ZIP платформы этот скрипт не входит.
 
 import csv
+from pathlib import Path
 
 # эти вопросы стоят примерами в prompt.txt, по ним качество не смотрим
 EXAMPLES_IN_PROMPT = {"4", "9", "18"}
+
+ROOT = Path(__file__).resolve().parent
+
+
+def locate(name: str) -> Path:
+    for folder in (ROOT, ROOT / "_materials", ROOT / "out"):
+        path = folder / name
+        if path.is_file():
+            return path
+    raise SystemExit(f"Нет файла {name}")
 
 
 # csv -> словарь {id: текст}
@@ -15,9 +26,9 @@ def read_csv(path, column):
 
 
 def main():
-    questions = read_csv("demo_questions.csv", "question")
-    golden = read_csv("demo_output.csv", "answer")
-    bot = read_csv("submission.csv", "answer")
+    questions = read_csv(locate("demo_questions.csv"), "question")
+    golden = read_csv(locate("demo_output.csv"), "answer")
+    bot = read_csv(locate("submission.csv"), "answer")
 
     lines = []
     for qid in questions:
@@ -35,11 +46,11 @@ def main():
         lines.append("Какие факты потерялись: ")
         lines.append("")
 
-    with open("сверка.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+    destination = ROOT / "сверка.txt"
+    destination.write_text("\n".join(lines), encoding="utf-8")
 
     missing = [qid for qid in questions if qid not in bot]
-    print(f"Готово: сверка.txt ({len(questions)} вопросов).")
+    print(f"Готово: {destination} ({len(questions)} вопросов).")
     if missing:
         print("Нет ответа на вопросы:", ", ".join(missing))
 

@@ -22,6 +22,7 @@ for _name in (
 from chunks import load_chunks
 from config import FALLBACK
 from consult import consult, normalize_answer
+from consultant import build_messages, clean_answer, load_prompt, parse_dialog
 from dialogue import last_user_text, parse_dialogue, prior_user_text
 from solution import read_questions, validate_submission, write_submission
 
@@ -60,6 +61,11 @@ def check_dialogue() -> list[tuple[str, str]]:
     facts = prior_user_text(parse_dialogue(by_id["18"])).lower()
     if "склад" not in facts or "сорока" not in facts:
         fail("id 18: в фактах диалога нет складов")
+    for qid, question in rows:
+        frame_last = last_user_text(parse_dialogue(question))
+        consultant_last = last_user_text(parse_dialog(question))
+        if frame_last != consultant_last:
+            fail(f"id {qid}: разбор диалога разошёлся")
     return rows
 
 
@@ -81,7 +87,8 @@ def check_chunks():
 def check_consult(rows, chunks) -> None:
     by_id = dict(rows)
     result = consult(parse_dialogue(by_id["1"]), client=None, chunks=chunks)
-    if result.text != FALLBACK:
+    raw = consult(by_id["1"], client=None, chunks=chunks)
+    if result.text != FALLBACK or raw.text != FALLBACK:
         fail("Без ключа LLM ответ должен быть заглушкой")
     if "\n" in result.text or not result.text.strip():
         fail("Текст ответа должен быть одной непустой строкой")
@@ -90,6 +97,20 @@ def check_consult(rows, chunks) -> None:
     if not result.sources or "23-solar.md" not in result.sources[0].path:
         got = result.sources[0].path if result.sources else "пусто"
         fail(f"Вопрос про скаты крыши ушёл не в солнечную станцию: {got}")
+    if not raw.sources or raw.sources[0].path != result.sources[0].path:
+        fail("Строка вопроса и разобранный диалог выбрали разные фрагменты")
+    if not (ROOT / "prompt.txt").is_file():
+        fail("Рядом с consultant.py нет prompt.txt")
+    rules, template = load_prompt()
+    if not rules or "{context}" not in template or "{question}" not in template:
+        fail("prompt.txt не делится на правила и шаблон")
+    built = build_messages(parse_dialog(by_id["18"]), "фрагмент про склады")
+    if built[0]["role"] != "system" or "фрагмент про склады" not in built[-1]["content"]:
+        fail("Сборка сообщений для модели потеряла контекст")
+    if "не готов оставлять телефон" not in built[-1]["content"]:
+        fail("В модель ушёл не последний вопрос диалога 18")
+    if clean_answer("<think>скрыто</think>\nДа, можно.") != "Да, можно.":
+        fail("Блок рассуждений модели не вырезается")
     if normalize_answer("первая\nстрока\n\nвторая") != "первая строка вторая":
         fail("Переносы внутри ответа не схлопываются")
 

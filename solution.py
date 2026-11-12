@@ -1,6 +1,6 @@
 """Точка входа платформы: вопросы, пул, submission.csv.
 
-Поиск живёт в retrieve.rank_chunks, текст ответа — в consult.write_answer.
+Поиск живёт в retrieve.rank_chunks, текст ответа — в prompt.txt через consultant.py.
 В CSV попадает только текст. Источники и заявка остаются в ConsultResult.
 """
 

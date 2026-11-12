@@ -192,8 +192,16 @@ def _apply_rerank(client, question: str, ranked: list[tuple[float, Chunk]]) -> l
             for _, chunk in ranked
         ]
         indices = rerank(client, question, documents, min(RERANKER_TOP_N, len(documents)))
-        selected = [ranked[index] for index in indices if 0 <= index < len(ranked)]
-        return selected or ranked
+        picked = []
+        seen: set[int] = set()
+        for index in indices:
+            if 0 <= index < len(ranked) and index not in seen:
+                picked.append(ranked[index])
+                seen.add(index)
+        if not picked:
+            return ranked
+        rest = [item for index, item in enumerate(ranked) if index not in seen]
+        return picked + rest
     except (httpx.HTTPError, KeyError, TypeError, ValueError, IndexError) as exc:
         print(f"Reranker: {safe_error(exc)}; продолжаем без него", file=sys.stderr)
         return ranked
@@ -205,7 +213,7 @@ def retrieve(question: str, chunks: list[Chunk], client=None, facts: str = "") -
     ranked = _apply_embeddings(client, question, ranked)
     ranked = _apply_rerank(client, question, ranked)
     sources = []
-    for score, chunk in ranked[:RERANKER_TOP_N]:
+    for score, chunk in ranked:
         quote = make_quote(chunk, question)
         if not quote:
             continue

@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parent
 INCLUDE = (
     "solution.py",
     "consult.py",
+    "consultant.py",
+    "prompt.txt",
     "contract.py",
     "dialogue.py",
     "chunks.py",
@@ -36,6 +38,7 @@ ZIP_LIMIT = 128 * 1024 * 1024
 LOCAL_MODULES = {
     "solution",
     "consult",
+    "consultant",
     "contract",
     "dialogue",
     "chunks",
@@ -106,7 +109,7 @@ def smoke_import(zip_path: Path) -> None:
         env = os.environ.copy()
         env["ENERGYTOOL_SKIP_DOTENV"] = "1"
         command = (
-            "import solution, consult, contract, dialogue, chunks, retrieve, llm, config"
+            "import solution, consult, consultant, contract, dialogue, chunks, retrieve, llm, config"
         )
         proc = subprocess.run(
             [sys.executable, "-c", command],

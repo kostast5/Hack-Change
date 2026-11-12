@@ -1,7 +1,8 @@
 """consult(messages) — общая точка для solution.py и веб-чата.
 
-Роль «Консультант» меняет SYSTEM_PROMPT и write_answer.
-Каркас не придумывает, какие уточняющие вопросы задавать.
+Текст ответа собирается из prompt.txt через consultant.build_messages.
+Поиск остаётся в retrieve.py: фильтр ветки search-rag отсекает файлы
+про тарифы, пороги мощности и данные для оценки, поэтому он не подключён.
 Заявка остаётся пустой: её включает консультант, когда клиент сам согласен.
 """
 
@@ -10,23 +11,16 @@ import sys
 import httpx
 
 from config import ANSWER_LIMIT, FALLBACK, LLM_KEY, LLM_MODEL, MAX_TOKENS, TEMPERATURE
+from consultant import build_messages, clean_answer, parse_dialog
 from contract import ConsultResult, LeadDraft, Source
 from chunks import Chunk, load_chunks
 from dialogue import last_user_text, normalize_messages, prior_user_text
 from llm import can_call, make_client, post, safe_error
 from retrieve import retrieve
 
-SYSTEM_PROMPT = (
-    "Ты консультант МТС EnergyTool. Ответь по-русски на последнюю реплику пользователя. "
-    "Опирайся только на фрагменты базы знаний. Не добавляй факты, которых во фрагментах нет. "
-    "Если во фрагментах нет ответа, прямо скажи об этом и предложи связаться со специалистом. "
-    "Не запрашивай фамилию, телефон и название компании. "
-    "Пиши кратко, обычно до 150 слов, одним абзацем."
-)
-
 
 def normalize_answer(text: str) -> str:
-    flat = " ".join((text or "").split())
+    flat = clean_answer(text)
     if not flat:
         return FALLBACK
     if len(flat) > ANSWER_LIMIT:
@@ -34,42 +28,31 @@ def normalize_answer(text: str) -> str:
     return flat or FALLBACK
 
 
-def _dialogue(messages: list[dict]) -> str:
-    lines = []
-    for message in messages:
-        speaker = "Пользователь" if message["role"] == "user" else "Ассистент"
-        if message["content"]:
-            lines.append(f"{speaker}: {message['content']}")
-    return "\n".join(lines)
+def _as_messages(messages) -> list[dict]:
+    if isinstance(messages, str):
+        parsed = parse_dialog(messages)
+        if parsed:
+            return parsed
+        return [{"role": "user", "content": ""}]
+    return normalize_messages(messages)
 
 
-def _fragments(sources: list[Source]) -> str:
+def _context(sources: list[Source]) -> str:
     blocks = []
-    for index, source in enumerate(sources, start=1):
-        blocks.append(f"[{index}] {source.path} — {source.heading}\n{source.quote}")
+    for source in sources:
+        blocks.append(f"{source.path} ({source.heading}): {source.quote}")
     return "\n\n".join(blocks)
 
 
 def write_answer(client: httpx.Client, messages: list[dict], sources: list[Source]) -> str:
-    """Текст для судьи и для чата. Здесь меняется промпт консультанта."""
+    """Текст для судьи и для чата. Правила и форма ответа — в prompt.txt."""
     if not can_call(client, LLM_KEY):
         return FALLBACK
     payload = {
         "model": LLM_MODEL,
         "temperature": TEMPERATURE,
         "max_tokens": MAX_TOKENS,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": (
-                    "Диалог:\n"
-                    + _dialogue(messages)
-                    + "\n\nОтветь на последнюю реплику пользователя.\n\nФрагменты базы знаний:\n"
-                    + _fragments(sources)
-                ),
-            },
-        ],
+        "messages": build_messages(messages, _context(sources)),
     }
     for attempt in range(2):
         try:
@@ -77,17 +60,18 @@ def write_answer(client: httpx.Client, messages: list[dict], sources: list[Sourc
             content = result["choices"][0]["message"].get("content") or ""
             if isinstance(content, list):
                 content = " ".join(str(part) for part in content)
-            if isinstance(content, str) and content.strip():
-                return content
+            cleaned = clean_answer(content)
+            if cleaned:
+                return cleaned
             raise ValueError("LLM вернула пустой ответ")
-        except (httpx.HTTPError, KeyError, TypeError, ValueError, IndexError) as exc:
+        except (httpx.HTTPError, KeyError, TypeError, ValueError, IndexError, OSError) as exc:
             print(f"LLM попытка {attempt + 1}: {safe_error(exc)}", file=sys.stderr)
     return FALLBACK
 
 
 def consult(messages, client: httpx.Client | None = None, chunks: list[Chunk] | None = None) -> ConsultResult:
     """Возвращает текст, источники и пустой черновик заявки."""
-    prepared = normalize_messages(messages)
+    prepared = _as_messages(messages)
     question = last_user_text(prepared)
     facts = prior_user_text(prepared)
     if chunks is None:
@@ -98,7 +82,7 @@ def consult(messages, client: httpx.Client | None = None, chunks: list[Chunk] | 
         own_client = True
     try:
         sources = retrieve(question, chunks, client=client, facts=facts) if question else []
-        if not question or not sources:
+        if not question or not can_call(client, LLM_KEY):
             text = FALLBACK
         else:
             text = write_answer(client, prepared, sources)

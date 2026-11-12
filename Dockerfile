@@ -11,6 +11,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY solution.py consult.py contract.py dialogue.py chunks.py retrieve.py llm.py config.py README.md ./
+COPY solution.py consult.py consultant.py prompt.txt contract.py dialogue.py chunks.py retrieve.py llm.py config.py README.md ./
 
 CMD ["python", "-u", "solution.py"]
