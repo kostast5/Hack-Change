@@ -1,0 +1,19 @@
+name: energytool
+
+services:
+  solution:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /data
+      SUBMISSION_PATH: /out/submission.csv
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./_materials:/data:ro
+      - ./out:/out
+
+  # Веб-чат добавляет роль «Интерфейс» сервисом web.
+  # Он вызывает consult() и публикует порт 8000.
+  # После этого полная демонстрация — та же команда docker compose up --build.
