@@ -6,8 +6,14 @@
 #   context  = <ваш поиск>(search_query(messages))
 #   answer   = clean_answer(<запрос к модели>(build_messages(messages, context)))
 
+import os
+import sys
 import re
 from pathlib import Path
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
 # prompt.txt должен лежать рядом с этим файлом (и в zip тоже в корне)
 PROMPT_FILE = Path(__file__).resolve().parent / "prompt.txt"

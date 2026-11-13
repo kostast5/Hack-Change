@@ -1,5 +1,12 @@
 """Единый формат источника для поиска и отладки."""
+import os
+import sys
+from pathlib import Path
 from dataclasses import dataclass, asdict
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
 
 @dataclass

@@ -1,5 +1,12 @@
 """Роутер по карте продуктов: задача клиента -> файл(ы) продукта."""
+import os
+import sys
 import re
+from pathlib import Path
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
 # Ключевые слова -> релевантные файлы базы знаний.
 # Источник: 00-reference/00-product-map.md
