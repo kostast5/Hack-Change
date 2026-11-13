@@ -1,0 +1,16 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.env
+out
+_materials
+journal
+defense
+*.pdf
+*.docx
+*.zip
+submission.csv
+check_skeleton.py
+package_zip.py

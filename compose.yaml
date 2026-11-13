@@ -1,0 +1,29 @@
+name: energytool
+
+services:
+  solution:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /data
+      SUBMISSION_PATH: /out/submission.csv
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./_materials:/data:ro
+      - ./out:/out
+
+  web:
+    build: .
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /data
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./_materials:/data:ro
