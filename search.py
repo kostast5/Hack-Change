@@ -1,6 +1,13 @@
 """Поиск по базе знаний: BM25 по чанкам + роутер + (опц.) эмбеддинги."""
+import os
+import sys
 import re
+from pathlib import Path
 from rank_bm25 import BM25Okapi
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
 from sources import Source
 

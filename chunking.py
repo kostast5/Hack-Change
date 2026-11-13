@@ -1,6 +1,13 @@
 """Разбиение markdown-документов по заголовкам."""
+import os
+import sys
 import re
 from pathlib import Path
+
+# Обеспечиваем импорт модулей из директории этого файла
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 

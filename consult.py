@@ -1,12 +1,29 @@
 """Общий контракт консультанта: consult(messages) -> (text, sources, draft)."""
 import os
+import sys
 from pathlib import Path
 
 import httpx
 
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
 from consultant import parse_dialog, search_query, build_messages, clean_answer, load_prompt
 from chunking import load_chunks_from_dir
 from search import search
+
+
+def _find_file(*names):
+    """Ищет файл так же, как solution.py: DATA_DIR, parent/DATA_DIR, cwd."""
+    data_dir = os.getenv("DATA_DIR", "data")
+    roots = (Path(data_dir), Path(__file__).resolve().parent / data_dir, Path.cwd())
+    for root in roots:
+        for name in names:
+            path = root / name
+            if path.is_file():
+                return path
+    return None
 
 
 _CHUNKS = None
@@ -15,20 +32,18 @@ _CHUNKS = None
 def get_chunks():
     global _CHUNKS
     if _CHUNKS is None:
-        data_dir = os.getenv("DATA_DIR", "data")
-        root = Path(data_dir)
-        kb = None
-        for name in ("knowledge-base.zip", "knowledge_base.zip", "kb.zip"):
-            p = root / name
-            if p.is_file():
-                kb = p
-                break
+        kb = _find_file("knowledge-base.zip", "knowledge_base.zip", "kb.zip")
         if kb is not None:
             import tempfile, zipfile
             tmp = Path(tempfile.mkdtemp())
             with zipfile.ZipFile(kb) as z:
                 z.extractall(tmp)
             root = tmp
+        else:
+            data_dir = os.getenv("DATA_DIR", "data")
+            root = Path(data_dir)
+            if not root.is_dir():
+                root = Path(__file__).resolve().parent / data_dir
         _CHUNKS = load_chunks_from_dir(str(root))
     return _CHUNKS
 
