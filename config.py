@@ -64,7 +64,7 @@ LLM_MODEL = (
     or env("VISION_LLM_MODEL")
     or env("OPENAI_MODEL", "qwen/qwen3.8-27b")
 )
-# AITUNNEL reasoning (Gemini Hydrogen и др.): {"effort": "low"|"medium"|"high"}. Пусто — не отправлять.
+# AITUNNEL: reasoning.effort low|medium|high; include_reasoning в consult — false. Пусто — без reasoning.
 LLM_REASONING_EFFORT = env("LLM_REASONING_EFFORT", "")
 EMB_MODEL = env("EMB_MODEL", "qwen3-embedding-8b")
 RERANKER_MODEL = env("RERANKER_MODEL", "rerank-5-pro")

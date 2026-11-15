@@ -140,7 +140,13 @@ def write_answer(client: httpx.Client, messages: list[dict], sources: list[Sourc
     effort = (LLM_REASONING_EFFORT or "").strip().lower()
     payloads: list[dict] = []
     if effort in {"low", "medium", "high"}:
-        payloads.append({**base, "reasoning": {"effort": effort}})
+        payloads.append(
+            {
+                **base,
+                "reasoning": {"effort": effort},
+                "include_reasoning": False,
+            }
+        )
     payloads.append(dict(base))
     last_error: BaseException | None = None
     for index, payload in enumerate(payloads):
