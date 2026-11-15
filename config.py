@@ -64,9 +64,9 @@ LLM_MODEL = (
     or env("VISION_LLM_MODEL")
     or env("OPENAI_MODEL", "qwen/qwen3.8-27b")
 )
-# Рассуждения (reasoning) в AITUNNEL: по умолчанию выключены. Включить: LLM_REASONING_ENABLED=1 и effort.
-LLM_REASONING_ENABLED = env("LLM_REASONING_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
-LLM_REASONING_EFFORT = env("LLM_REASONING_EFFORT", "")
+# AITUNNEL / Gemini: reasoning.effort low|medium|high; в ответ клиенту не отдаём (include_reasoning false).
+LLM_REASONING_ENABLED = env("LLM_REASONING_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
+LLM_REASONING_EFFORT = env("LLM_REASONING_EFFORT", "low")
 EMB_MODEL = env("EMB_MODEL", "qwen3-embedding-8b")
 RERANKER_MODEL = env("RERANKER_MODEL", "rerank-5-pro")
 TOP_K = number("TOP_K", 4, 1, 30)
