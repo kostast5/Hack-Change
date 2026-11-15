@@ -74,6 +74,19 @@ def _is_escalation(text: str) -> bool:
     return flat == FALLBACK or flat.startswith("По этому вопросу лучше продолжить")
 
 
+def _user_rejects_escalation(messages: list[dict]) -> bool:
+    """Клиент не хочет заявку — отвечаем по делу, не повторяем FALLBACK."""
+    user = last_user_text(messages).lower().replace("ё", "е").strip()
+    if not user or len(user) > 32:
+        return False
+    if not re.fullmatch(r"(чего|что|зачем|почему|нет|неа|не хочу|не надо)[\s!?\.]*", user):
+        return False
+    for msg in reversed(messages):
+        if msg.get("role") == "assistant" and _is_escalation(str(msg.get("content", ""))):
+            return True
+    return False
+
+
 def normalize_answer(text: str, *, preserve_lines: bool = False) -> str:
     if _is_escalation(text):
         return FALLBACK
@@ -156,7 +169,7 @@ def write_answer(
             }
         )
     last_error: BaseException | None = None
-    attempts = 1 if fast else 2
+    attempts = 2
     for index, payload in enumerate(payloads):
         for attempt in range(attempts):
             try:
@@ -323,11 +336,13 @@ def consult(
         suggestions: list[str] = []
         if not question or not can_call(client, LLM_KEY):
             text = FALLBACK
-        elif weak:
+        elif weak and not _user_rejects_escalation(prepared):
             text = CLARIFY
             suggestions = list(TASK_BUTTONS)
         else:
             text = write_answer(client, prepared, sources, fast=fast)
+            if _is_escalation(text) and _user_rejects_escalation(prepared):
+                text = write_answer(client, prepared, sources, fast=False)
         text = normalize_answer(text, preserve_lines=chat_format)
         suggestions = _dedupe_suggestions(suggestions)
         lead = _lead_for(prepared, sources)
