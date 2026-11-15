@@ -19,7 +19,7 @@ function openDialog(session) {
     box.append(el('div', css, message.content));
   });
   const back = el('a', 'btn sec', 'Продолжить в чате');
-  back.href = `/?session=${encodeURIComponent(session.id)}`;
+  back.href = `/?session=${encodeURIComponent(session.id)}&persist=1`;
   box.append(back);
   dialogBox.append(box);
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });

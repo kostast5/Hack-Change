@@ -138,7 +138,7 @@ def write_answer(client: httpx.Client, messages: list[dict], sources: list[Sourc
         "messages": build_messages(messages, _context(sources), client_memory=dialog_memory(messages)),
     }
     effort = (LLM_REASONING_EFFORT or "").strip().lower()
-    payloads: list[dict] = []
+    payloads: list[dict] = [dict(base)]
     if effort in {"low", "medium", "high"}:
         payloads.append(
             {
@@ -147,7 +147,6 @@ def write_answer(client: httpx.Client, messages: list[dict], sources: list[Sourc
                 "include_reasoning": False,
             }
         )
-    payloads.append(dict(base))
     last_error: BaseException | None = None
     for index, payload in enumerate(payloads):
         for attempt in range(2):
@@ -204,6 +203,7 @@ def consult(
     chunks: list[Chunk] | None = None,
     *,
     chat_format: bool = False,
+    fast: bool = False,
 ) -> ConsultResult:
     """Текст, источники, кнопки и заявка, если клиент сам готов к контакту."""
     prepared = strip_ui_greeting(_as_messages(messages))
@@ -228,7 +228,9 @@ def consult(
                 ),
                 cached=True,
             )
-        sources = retrieve(question, chunks, client=client, facts=facts) if question else []
+        sources = (
+            retrieve(question, chunks, client=client, facts=facts, fast=fast) if question else []
+        )
         ready = client_is_ready(question)
         weak = bool(question) and retrieval_is_weak(question, facts, chunks) and not ready
         suggestions: list[str] = []

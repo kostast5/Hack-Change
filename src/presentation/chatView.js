@@ -27,7 +27,9 @@ function renderTyping() {
   return node;
 }
 
-export function renderChat(container, state, session, { demos, onDemo, onSubmitLead, onDeclineLead, onQuick, onRequestLead }) {
+export function renderChat(container, state, session, {
+  demos, onDemo, onSubmitLead, onDeclineLead, onQuick, onRequestLead, animateFrom = 0,
+}) {
   container.innerHTML = '';
 
   if (!session || !session.messages.length) {
@@ -37,11 +39,17 @@ export function renderChat(container, state, session, { demos, onDemo, onSubmitL
 
   const lastAssistant = [...session.messages].reverse().find((m) => m.role === 'assistant');
 
-  session.messages.forEach((m) => {
-    if (m.role === 'user') container.append(el('div', 'msg user', m.content));
-    else if (m.role === 'error') container.append(el('div', 'msg bot err', m.content));
-    else {
-      container.append(el('div', 'msg bot', m.content));
+  session.messages.forEach((m, index) => {
+    const animate = index >= animateFrom;
+    if (m.role === 'user') {
+      const node = el('div', animate ? 'msg user msg-in' : 'msg user', m.content);
+      container.append(node);
+    } else if (m.role === 'error') {
+      const node = el('div', animate ? 'msg bot err msg-in' : 'msg bot err', m.content);
+      container.append(node);
+    } else {
+      const node = el('div', animate ? 'msg bot msg-in' : 'msg bot', m.content);
+      container.append(node);
       if (state.debug) container.append(renderDebugPanel(m));
       const chips = m.suggestions || [];
       if (!state.busy && m === lastAssistant && session.leadState === LeadState.NONE && chips.length) {
@@ -57,7 +65,11 @@ export function renderChat(container, state, session, { demos, onDemo, onSubmitL
     }
   });
 
-  if (state.busy) container.append(renderTyping());
+  if (state.busy) {
+    const typing = renderTyping();
+    typing.classList.add('msg-in');
+    container.append(typing);
+  }
   const userSpoke = session.messages.some((m) => m.role === 'user');
   if (!state.busy && userSpoke && session.leadState === LeadState.NONE && lastAssistant) {
     const ask = el('button', 'btn sec ask-lead', 'Оставить заявку');
@@ -65,8 +77,16 @@ export function renderChat(container, state, session, { demos, onDemo, onSubmitL
     ask.onclick = () => onRequestLead();
     container.append(ask);
   }
-  if (session.leadState === LeadState.DRAFT) container.append(renderLeadCard(session.lead, { onSubmit: onSubmitLead, onDecline: onDeclineLead }));
-  if (session.leadState === LeadState.SENT) container.append(renderLeadDone());
+  if (session.leadState === LeadState.DRAFT) {
+    const lead = renderLeadCard(session.lead, { onSubmit: onSubmitLead, onDecline: onDeclineLead });
+    lead.classList.add('msg-in');
+    container.append(lead);
+  }
+  if (session.leadState === LeadState.SENT) {
+    const done = renderLeadDone();
+    done.classList.add('msg-in');
+    container.append(done);
+  }
 
   container.scrollTop = container.scrollHeight;
 }

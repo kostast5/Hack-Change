@@ -207,11 +207,19 @@ def _apply_rerank(client, question: str, ranked: list[tuple[float, Chunk]]) -> l
         return ranked
 
 
-def retrieve(question: str, chunks: list[Chunk], client=None, facts: str = "") -> list[Source]:
+def retrieve(
+    question: str,
+    chunks: list[Chunk],
+    client=None,
+    facts: str = "",
+    *,
+    fast: bool = False,
+) -> list[Source]:
     """Фрагменты для ответа: путь, заголовок, цитата, оценка."""
     ranked = rank_chunks(question, facts, chunks)
-    ranked = _apply_embeddings(client, question, ranked)
-    ranked = _apply_rerank(client, question, ranked)
+    if not fast:
+        ranked = _apply_embeddings(client, question, ranked)
+        ranked = _apply_rerank(client, question, ranked)
     sources = []
     for score, chunk in ranked:
         quote = make_quote(chunk, question)

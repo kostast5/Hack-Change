@@ -5,7 +5,7 @@
 
 import {
   LeadState, createSession, isEmpty, addUserMessage, addAssistantMessage,
-  addErrorMessage, offerLead, declineLead, markLeadSent, toPayload, LEAD_REQUEST,
+  addErrorMessage, offerLead, declineLead, markLeadSent, toPayload,
 } from '../domain/session.js?v=3';
 
 export class ChatService {
@@ -116,8 +116,18 @@ export class ChatService {
     this.#commit();
   }
 
-  requestLead() {
-    return this.send(LEAD_REQUEST);
+  openLeadForm() {
+    if (!this.current) this.newDialog();
+    const session = this.current;
+    if (!session || session.leadState !== LeadState.NONE) return;
+    const lastUser = [...session.messages].reverse().find((m) => m.role === 'user');
+    offerLead(session, {
+      fio: '',
+      phone: '',
+      company: '',
+      summary: lastUser ? String(lastUser.content).slice(0, 800) : '',
+    });
+    this.#commit();
   }
 
   async send(rawText) {

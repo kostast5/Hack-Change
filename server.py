@@ -110,6 +110,7 @@ def api_consult(req: ConsultRequest):
             client=client,
             chunks=get_chunks(),
             chat_format=True,
+            fast=True,
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=solution.safe_error(exc))
