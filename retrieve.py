@@ -9,7 +9,7 @@ from collections import Counter
 import httpx
 
 from chunks import Chunk
-from config import EMB_KEY, RERANK_KEY, RERANKER_TOP_N, TOP_K
+from config import CHAT_TOP_K, EMB_KEY, RERANK_KEY, RERANKER_TOP_N, TOP_K
 from contract import Source
 from llm import can_call, embeddings, rerank, safe_error
 
@@ -220,9 +220,11 @@ def retrieve(
     if not fast:
         ranked = _apply_embeddings(client, question, ranked)
         ranked = _apply_rerank(client, question, ranked)
+    quote_limit = 520 if fast else 1800
+    top_n = CHAT_TOP_K if fast else TOP_K
     sources = []
-    for score, chunk in ranked:
-        quote = make_quote(chunk, question)
+    for score, chunk in ranked[:top_n]:
+        quote = make_quote(chunk, question, quote_limit)
         if not quote:
             continue
         sources.append(Source(path=chunk.path, heading=chunk.heading, quote=quote, score=float(score)))

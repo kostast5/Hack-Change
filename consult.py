@@ -15,6 +15,7 @@ import httpx
 from config import (
     ANSWER_LIMIT,
     ANSWER_WORD_LIMIT,
+    CHAT_MAX_TOKENS,
     FALLBACK,
     LLM_KEY,
     LLM_MODEL,
@@ -127,14 +128,21 @@ def _context(sources: list[Source]) -> str:
     return "\n\n".join(blocks)
 
 
-def write_answer(client: httpx.Client, messages: list[dict], sources: list[Source]) -> str:
+def write_answer(
+    client: httpx.Client,
+    messages: list[dict],
+    sources: list[Source],
+    *,
+    fast: bool = False,
+) -> str:
     """Текст для судьи и для чата. Правила и форма ответа — в prompt.txt."""
     if not can_call(client, LLM_KEY):
         return FALLBACK
+    token_cap = CHAT_MAX_TOKENS if fast else MAX_TOKENS
     base = {
         "model": LLM_MODEL,
         "temperature": TEMPERATURE,
-        "max_tokens": MAX_TOKENS,
+        "max_tokens": token_cap,
         "messages": build_messages(messages, _context(sources), client_memory=dialog_memory(messages)),
     }
     effort = (LLM_REASONING_EFFORT or "").strip().lower()
@@ -148,8 +156,9 @@ def write_answer(client: httpx.Client, messages: list[dict], sources: list[Sourc
             }
         )
     last_error: BaseException | None = None
+    attempts = 1 if fast else 2
     for index, payload in enumerate(payloads):
-        for attempt in range(2):
+        for attempt in range(attempts):
             try:
                 result = post(client, "/chat/completions", LLM_KEY, payload)
                 message = result["choices"][0]["message"]
@@ -240,7 +249,7 @@ def consult(
             text = CLARIFY
             suggestions = list(TASK_BUTTONS)
         else:
-            text = write_answer(client, prepared, sources)
+            text = write_answer(client, prepared, sources, fast=fast)
         text = normalize_answer(text, preserve_lines=chat_format)
         if not suggestions:
             suggestions = buttons_for(text, prepared)
