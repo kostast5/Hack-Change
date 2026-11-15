@@ -1,11 +1,20 @@
-# Данные кейса — не публикуем (условия кейса)
-knowledge-base/
-knowledge-base.zip
-kb.zip
-*.pdf
-demo_questions.csv
-demo_output.csv
+# Корневые копии базы и вопросов — не в git
+/knowledge-base.zip
+/kb.zip
+/knowledge_base.zip
+/knowledge-base/
 questions.csv
+demo_questions.csv
+!_materials/demo_questions.csv
+demo_output.csv
+
+# Дублирует knowledge-base.zip
+_materials/kb/
+
+# Образцы организаторов
+_materials/sample/
+_materials/sample_submission.zip
+_materials/*.docx
 
 # Результаты прогонов
 submission.csv
@@ -19,9 +28,8 @@ __pycache__/
 .DS_Store
 .venv/
 venv/
-
-# Сборка каркаса
 out/
 submission.zip
 *.log
 .pytest_cache/
+*.pdf

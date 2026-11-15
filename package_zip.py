@@ -159,7 +159,7 @@ def main() -> int:
     print(f"Готов {destination} ({size} байт)")
     print("В архиве только корень: " + ", ".join(INCLUDE))
     print("Базы знаний и questions.csv внутри нет.")
-    print("Перед отправкой запишите гипотезу в journal/submits.md. Лимит — 5 сабмитов в сутки.")
+    print("Лимит платформы — 5 сабмитов в сутки.")
     return 0
 
 
