@@ -148,7 +148,7 @@ export class ChatService {
       addAssistantMessage(session, reply);
       if (reply.lead) offerLead(session, reply.lead);
     } catch (e) {
-      addErrorMessage(session, 'Не удалось получить ответ. Попробуйте ещё раз.');
+      addErrorMessage(session, 'Не удалось получить ответ. Повторите сообщение или оставьте заявку.');
     } finally {
       this.state.busy = false;
       this.#commit();

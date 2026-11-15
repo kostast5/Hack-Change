@@ -1,6 +1,6 @@
 import { el } from './dom.js';
 import { renderDebugPanel } from './debugPanel.js?v=3';
-import { renderLeadCard, renderLeadDone } from './leadCard.js?v=8';
+import { renderLeadCard, renderLeadDone } from './leadCard.js?v=9';
 import { LeadState } from '../domain/session.js?v=3';
 
 function renderWelcome(demos, onDemo) {

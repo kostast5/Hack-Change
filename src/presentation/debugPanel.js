@@ -3,11 +3,12 @@ import { el } from './dom.js';
 // Режим отладки: время ответа, путь файла базы, раздел, оценка и цитата
 export function renderDebugPanel(message) {
   const box = el('div', 'dbg');
-  const mockNote = message.mock ? ' · черновик, без ответа консультанта' : '';
-  box.append(el('div', 't', `Время ответа: ${(message.ms / 1000).toFixed(2)} с${mockNote}`));
+  const mockNote = message.mock ? ' · без вызова API' : '';
+  const cacheNote = message.cached ? ' · из кэша' : '';
+  box.append(el('div', 't', `Время ответа: ${(message.ms / 1000).toFixed(2)} с${mockNote}${cacheNote}`));
 
   if (!message.sources.length) {
-    box.append(el('div', 'src', 'К ответу не приложен фрагмент материалов.'));
+    box.append(el('div', 'src', 'К ответу не приложён фрагмент базы знаний.'));
     return box;
   }
   message.sources.forEach((s) => {

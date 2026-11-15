@@ -63,7 +63,7 @@ function render(sessions) {
     row.type = 'button';
     const count = (session.messages || []).length;
     const mark = session.leadState === 'sent' ? ' · есть заявка' : '';
-    row.append(el('b', '', session.title || 'чат'), el('small', '', `${when(session.ts)} · ${count} сообщ.${mark}`));
+    row.append(el('b', '', session.title || 'Чат'), el('small', '', `${when(session.ts)} · ${count} сообщ.${mark}`));
     row.onclick = () => openDialog(session);
     list.append(row);
   });

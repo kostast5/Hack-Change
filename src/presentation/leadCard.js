@@ -4,7 +4,7 @@ export function renderLeadCard(lead, { onSubmit, onDecline }) {
   const form = el('form', 'lead');
   form.append(
     el('h3', '', 'Контакты для связи'),
-    el('p', 'n', 'Введите имя и номер телефона.'),
+    el('p', 'n', 'Укажите имя и телефон. Компания и описание — по желанию.'),
   );
 
   const field = (name, label, tag = 'input') => {
@@ -23,7 +23,7 @@ export function renderLeadCard(lead, { onSubmit, onDecline }) {
   phone.required = true;
   field('company', 'Компания');
   const summary = field('summary', 'Описание проблемы', 'textarea');
-  summary.value = '';
+  summary.value = lead.summary || '';
 
   const row = el('div', 'row');
   const ok = el('button', 'btn', 'Отправить');
@@ -48,7 +48,7 @@ export function renderLeadDone() {
   link.href = '/manager';
   card.append(
     el('h3', '', 'Ожидайте, заявка в работе'),
-    el('p', 'n', 'Специалист вернется к вам с решением.'),
+    el('p', 'n', 'Специалист свяжется с вами и предложит решение.'),
     link,
   );
   return card;
