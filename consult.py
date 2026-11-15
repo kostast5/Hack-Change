@@ -20,7 +20,6 @@ from config import (
     FALLBACK,
     LLM_KEY,
     LLM_MODEL,
-    LLM_REASONING_EFFORT,
     MAX_TOKENS,
     TEMPERATURE,
 )
@@ -42,7 +41,7 @@ from flow import (
     sources_from_cache,
     strip_ui_greeting,
 )
-from llm import can_call, make_client, post, safe_error
+from llm import can_call, completion_extras, make_client, post, safe_error
 from retrieve import retrieve
 
 
@@ -152,39 +151,29 @@ def write_answer(
     if not can_call(client, LLM_KEY):
         return FALLBACK
     token_cap = CHAT_MAX_TOKENS if fast else MAX_TOKENS
-    base = {
+    payload = {
         "model": LLM_MODEL,
         "temperature": TEMPERATURE,
         "max_tokens": token_cap,
         "messages": build_messages(messages, _context(sources), client_memory=dialog_memory(messages)),
+        **completion_extras(),
     }
-    effort = (LLM_REASONING_EFFORT or "").strip().lower()
-    payloads: list[dict] = [dict(base)]
-    if effort in {"low", "medium", "high"}:
-        payloads.append(
-            {
-                **base,
-                "reasoning": {"effort": effort},
-                "include_reasoning": False,
-            }
-        )
     last_error: BaseException | None = None
     attempts = 2
-    for index, payload in enumerate(payloads):
-        for attempt in range(attempts):
-            try:
-                result = post(client, "/chat/completions", LLM_KEY, payload)
+    for attempt in range(attempts):
+        try:
+            result = post(client, "/chat/completions", LLM_KEY, payload)
                 message = result["choices"][0]["message"]
                 cleaned = clean_answer(_llm_message_text(message))
-                if cleaned:
-                    return cleaned
-                last_error = ValueError("LLM вернула пустой ответ")
-            except (httpx.HTTPError, KeyError, TypeError, ValueError, IndexError, OSError) as exc:
-                last_error = exc
-                print(
-                    f"LLM попытка {index + 1}.{attempt + 1}: {safe_error(exc)}",
-                    file=sys.stderr,
-                )
+            if cleaned:
+                return cleaned
+            last_error = ValueError("LLM вернула пустой ответ")
+        except (httpx.HTTPError, KeyError, TypeError, ValueError, IndexError, OSError) as exc:
+            last_error = exc
+            print(
+                f"LLM попытка {attempt + 1}: {safe_error(exc)}",
+                file=sys.stderr,
+            )
     if last_error is not None:
         print(f"LLM ответ не получен: {safe_error(last_error)}", file=sys.stderr)
     return FALLBACK
@@ -226,6 +215,7 @@ def suggest_replies(client: httpx.Client, answer: str, *, fast: bool = False) ->
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": f"Вопрос консультанта:\n{question}"},
                 ],
+                **completion_extras(),
             },
         )
         message = result["choices"][0]["message"]

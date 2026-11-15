@@ -9,10 +9,22 @@ from config import (
     EMB_KEY,
     EMB_MODEL,
     LLM_KEY,
+    LLM_REASONING_EFFORT,
+    LLM_REASONING_ENABLED,
     RERANK_KEY,
     RERANKER_MODEL,
     REQUEST_TIMEOUT,
 )
+
+
+def completion_extras() -> dict:
+    """AITUNNEL: не отдаём reasoning в ответ; effort только если явно включён."""
+    extra: dict = {"include_reasoning": False}
+    if LLM_REASONING_ENABLED:
+        effort = (LLM_REASONING_EFFORT or "").strip().lower()
+        if effort in {"low", "medium", "high"}:
+            extra["reasoning"] = {"effort": effort}
+    return extra
 
 
 def make_client() -> httpx.Client:

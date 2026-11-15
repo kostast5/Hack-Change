@@ -64,7 +64,8 @@ LLM_MODEL = (
     or env("VISION_LLM_MODEL")
     or env("OPENAI_MODEL", "qwen/qwen3.8-27b")
 )
-# AITUNNEL: reasoning.effort low|medium|high; include_reasoning в consult — false. Пусто — без reasoning.
+# Рассуждения (reasoning) в AITUNNEL: по умолчанию выключены. Включить: LLM_REASONING_ENABLED=1 и effort.
+LLM_REASONING_ENABLED = env("LLM_REASONING_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
 LLM_REASONING_EFFORT = env("LLM_REASONING_EFFORT", "")
 EMB_MODEL = env("EMB_MODEL", "qwen3-embedding-8b")
 RERANKER_MODEL = env("RERANKER_MODEL", "rerank-5-pro")
