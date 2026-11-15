@@ -163,8 +163,8 @@ def write_answer(
     for attempt in range(attempts):
         try:
             result = post(client, "/chat/completions", LLM_KEY, payload)
-                message = result["choices"][0]["message"]
-                cleaned = clean_answer(_llm_message_text(message))
+            message = result["choices"][0]["message"]
+            cleaned = clean_answer(_llm_message_text(message))
             if cleaned:
                 return cleaned
             last_error = ValueError("LLM вернула пустой ответ")
