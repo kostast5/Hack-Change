@@ -37,20 +37,37 @@ questions.csv
 
 Форма ответа, границы и уточняющие вопросы записаны консультантом в `prompt.txt`. Каркас этот текст не переписывает.
 
-## Локальный прогон
+## Быстрый старт для команды
+
+В репозитории уже лежит рабочий `.env` (AITunnel, модель **gemini-4-hydrogen**). После клона:
+
+```powershell
+python -m pip install -r requirements.txt -r requirements-web.txt
+.\run-web.ps1
+```
+
+Откройте http://127.0.0.1:8000. Менеджерские заявки: http://127.0.0.1:8000/manager.html.
+
+Альтернатива без скрипта:
+
+```powershell
+python -m uvicorn server:app --host 127.0.0.1 --port 8000
+```
+
+Ключ можно задать и как `AITUNNEL_API_KEY` — код принимает его наравне с `LLM_API_KEY`.
+
+## Локальный прогон CSV
 
 Из корня репозитория:
 
 ```powershell
-copy .env.example .env
 python -m pip install -r requirements.txt
-pip install -r requirements-web.txt
 python solution.py
 ```
 
 `DATA_DIR` в `.env` указывает на `_materials`, где лежат `demo_questions.csv` и `knowledge-base.zip`. Платформа кладёт в свой каталог `questions.csv` и тот же архив базы. Скрипт сначала ищет `questions.csv`, затем `demo_questions.csv`.
 
-Без адреса и ключа LLM в `submission.csv` будет 18 непустых заглушек, а в консоли — выбранные разделы. Так проверяется каркас. Содержательные ответы появляются, когда в `.env` есть `LLM_BASE_URL` и `LLM_API_KEY`.
+Без ключа в окружении в `submission.csv` будут заглушки. В командном репозитории ключ уже в `.env`; на платформе Hack&Change переменные задаёт оркестратор.
 
 Перед упаковкой:
 
@@ -95,7 +112,7 @@ python -m uvicorn server:app --host 127.0.0.1 --port 8000
 | Переменная | Назначение |
 |---|---|
 | `LLM_BASE_URL`, `BASE_URL`, `OPENAI_BASE_URL` | адрес OpenAI-совместимого прокси |
-| `LLM_API_KEY`, `OPENAI_API_KEY` | ключ LLM |
+| `LLM_API_KEY`, `AITUNNEL_API_KEY`, `OPENAI_API_KEY` | ключ LLM |
 | `EMBEDDER_API_KEY` | ключ эмбеддера; если пусто — ключ LLM |
 | `RERANKER_API_KEY` | ключ реранкера; если пусто — ключ LLM |
 | `LLM_MODEL`, `GEN_MODEL`, `OPENAI_MODEL` | модель генерации |

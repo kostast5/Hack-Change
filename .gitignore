@@ -20,9 +20,6 @@ _materials/*.docx
 submission.csv
 сверка.txt
 
-# Секреты
-.env
-
 # Служебное
 __pycache__/
 .DS_Store

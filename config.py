@@ -55,7 +55,7 @@ def _base_url() -> str:
 
 DATA_DIR = Path(env("DATA_DIR", "data"))
 BASE_URL = _base_url()
-LLM_KEY = env("LLM_API_KEY") or env("OPENAI_API_KEY")
+LLM_KEY = env("LLM_API_KEY") or env("AITUNNEL_API_KEY") or env("OPENAI_API_KEY")
 EMB_KEY = env("EMBEDDER_API_KEY") or LLM_KEY
 RERANK_KEY = env("RERANKER_API_KEY") or LLM_KEY
 LLM_MODEL = (
@@ -64,7 +64,7 @@ LLM_MODEL = (
     or env("VISION_LLM_MODEL")
     or env("OPENAI_MODEL", "qwen/qwen3.8-27b")
 )
-# Для gpt-6.1-terra в AITUNNEL: {"effort": "low"|"medium"|"high"}. Пусто — не отправлять.
+# AITUNNEL reasoning (Gemini Hydrogen и др.): {"effort": "low"|"medium"|"high"}. Пусто — не отправлять.
 LLM_REASONING_EFFORT = env("LLM_REASONING_EFFORT", "")
 EMB_MODEL = env("EMB_MODEL", "qwen3-embedding-8b")
 RERANKER_MODEL = env("RERANKER_MODEL", "rerank-5-pro")

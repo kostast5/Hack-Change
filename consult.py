@@ -104,10 +104,10 @@ def _llm_message_text(message: dict) -> str:
     text = str(content).strip()
     if text:
         return text
-    for key in ("reasoning", "text"):
-        alt = message.get(key)
-        if isinstance(alt, str) and alt.strip() and "encrypted" not in alt.lower():
-            return alt.strip()
+    # Gemini Hydrogen при reasoning иногда оставляет content пустым, а рассуждения — в reasoning.
+    alt = message.get("text")
+    if isinstance(alt, str) and alt.strip():
+        return alt.strip()
     return ""
 
 
