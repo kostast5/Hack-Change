@@ -22,19 +22,6 @@ CLARIFY = (
 )
 TASK_BUTTONS = ["Счета и тарифы", "Сбор показаний", "Потери в сети", "Солнечная станция"]
 POWER_BAND_BUTTONS = ["Меньше 750 кВт", "750 кВт – 20 МВт", "Больше 20 МВт"]
-EVENING_HOUR_BUTTONS = ["18:00–20:00", "20:00–22:00", "22:00–24:00"]
-LOAD_PERIOD_BUTTONS = ["Днём", "Вечером", "Круглосуточно"]
-CATEGORY_BUTTONS = ["1–2", "3–4", "5–6", "Не знаю"]
-_HOURLY_METER_BUTTONS = ["Есть почасовой учёт", "Нет", "Не уверен"]
-_POWER_QUESTION = re.compile(
-    r"присоединен|присоединён|"
-    r"(какая|какой|сколько).{0,25}мощност|"
-    r"мощност.{0,35}(объект|объекта|у вас|площадк|предприят)|"
-    r"диапазон.{0,20}мощност|"
-    r"меньше\s*750|750\s*квт|20\s*мвт|"
-    r"выход.{0,15}оптов|орэм",
-    re.I,
-)
 _POWER_BAND = re.compile(
     r"меньше\s*750|менее\s*750|"
     r"750\s*квт\s*[–\-]\s*20|"
@@ -271,58 +258,6 @@ def user_already_named_power(messages: list[dict] | None) -> bool:
     return bool(_POWER_BAND.search(blob))
 
 
-def _last_question(answer: str) -> str:
-    """Последнее предложение-вопрос в ответе — только по нему подбираем кнопки."""
-    if not answer or "?" not in answer:
-        return ""
-    last: str | None = None
-    for match in re.finditer(r"[^.!?\n]*\?", answer):
-        last = match.group(0)
-    if not last:
-        return ""
-    return last.lower().replace("ё", "е")
-
-
-def buttons_for(answer: str, messages: list[dict] | None = None) -> list[str]:
-    """Кнопки под уточняющим вопросом. На утверждение без вопроса их нет."""
-    text = (answer or "").lower().replace("ё", "е")
-    if "?" not in text:
-        return []
-    q = _last_question(answer) or text
-    if "с чем помочь" in q or "с чем могу" in q:
-        return list(TASK_BUTTONS)
-    if re.search(r"вечерн", q) and re.search(r"час|когда|нагруз|пик|максим", q):
-        return list(EVENING_HOUR_BUTTONS)
-    if re.search(r"днем|дневн|вечером|ноч", q) and re.search(
-        r"потреб|нагруз|когда|больше|основн|пик", q
-    ):
-        return list(LOAD_PERIOD_BUTTONS)
-    if re.search(r"почасов", q) and re.search(r"учет|учёт|тариф|категор", q):
-        return list(_HOURLY_METER_BUTTONS)
-    if "отключен" in q:
-        return ["Нужен резерв", "Только экономия"]
-    if re.search(r"кровл|крыш", q) and re.search(r"лет|возраст|стар", q):
-        return ["До 10 лет", "10–20 лет", "Старше 20 лет"]
-    if re.search(r"вручную|показани|собира", q):
-        return ["Вручную", "Автоматически", "По объектам"]
-    if re.search(r"ценов\w*\s*категор", q):
-        if messages:
-            blob = " ".join(
-                m["content"] for m in messages if m.get("role") == "user" and m.get("content")
-            ).lower()
-            if _price_category_from_dialog(blob):
-                return []
-        return list(CATEGORY_BUTTONS)
-    if messages and re.search(r"квт\s*·?\s*ч|расход.{0,30}месяц", q):
-        if _monthly_kwh_from_dialog(messages):
-            return []
-    if _POWER_QUESTION.search(q):
-        if messages and user_already_named_power(messages):
-            return []
-        return list(POWER_BAND_BUTTONS)
-    return []
-
-
 def _flat(text: str) -> str:
     return " ".join((text or "").split())
 
@@ -442,7 +377,7 @@ def build_lead(messages: list[dict], sources: list[Source]) -> LeadDraft:
 
 def cache_key(messages: list[dict]) -> str:
     body = [{"role": message["role"], "content": message["content"]} for message in messages]
-    return "talk17\n" + LLM_MODEL + "\n" + json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+    return "talk18\n" + LLM_MODEL + "\n" + json.dumps(body, ensure_ascii=False, separators=(",", ":"))
 
 
 def _load_cache() -> dict[str, dict]:

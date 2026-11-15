@@ -8,6 +8,7 @@
 Повтор того же диалога берётся из кэша и в модель не отправляется.
 """
 
+import re
 import sys
 
 import httpx
@@ -31,7 +32,6 @@ from flow import (
     CLARIFY,
     TASK_BUTTONS,
     build_lead,
-    buttons_for,
     cache_get,
     cache_key,
     cache_put,
@@ -177,6 +177,83 @@ def write_answer(
     return FALLBACK
 
 
+def _last_question_in_answer(answer: str) -> str:
+    last = ""
+    for match in re.finditer(r"[^.!?\n]*\?", answer or ""):
+        last = match.group(0).strip()
+    return last
+
+
+def suggest_replies(client: httpx.Client, answer: str, *, fast: bool = False) -> list[str]:
+    """Короткие варианты ответа на последний вопрос ассистента — генерирует LLM."""
+    question = _last_question_in_answer(answer)
+    if not question or not can_call(client, LLM_KEY):
+        return []
+    prompt = (
+        "Ты подбираешь варианты быстрых ответов для клиента бизнеса.\n"
+        "По последнему вопросу консультанта дай 2–3 коротких варианта (на русском).\n"
+        "Правила:\n"
+        "— только ответы, которые реально отвечают на ЭТОТ вопрос;\n"
+        "— без нумерации и кавычек, до 8 слов в варианте;\n"
+        "— один вариант на строку;\n"
+        "— если вопрос да/нет — варианты вроде «Да», «Нет», «Пока нет»;\n"
+        "— не подставляй диапазоны мощности, если вопрос не про мощность."
+    )
+    try:
+        result = post(
+            client,
+            "/chat/completions",
+            LLM_KEY,
+            {
+                "model": LLM_MODEL,
+                "temperature": 0.25,
+                "max_tokens": 200,
+                "messages": [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": f"Вопрос консультанта:\n{question}"},
+                ],
+            },
+        )
+        message = result["choices"][0]["message"]
+        raw = clean_answer(_llm_message_text(message))
+        if not raw:
+            alt = message.get("content")
+            if isinstance(alt, str):
+                raw = alt.strip()
+    except (httpx.HTTPError, KeyError, TypeError, ValueError, IndexError, OSError) as exc:
+        print(f"Подсказки кнопок: {safe_error(exc)}", file=sys.stderr)
+        return []
+    if not raw:
+        return _fallback_suggestions(question)
+    items: list[str] = []
+    for line in raw.replace(";", "\n").split("\n"):
+        line = re.sub(r"^[\d\.\)\-\*•]+\s*", "", line.strip())
+        line = line.strip("«»\"' ")
+        if not line or len(line) > 72:
+            continue
+        items.append(line)
+    parsed = _dedupe_suggestions(items)[:3]
+    return parsed or _fallback_suggestions(question)
+
+
+def _fallback_suggestions(question: str) -> list[str]:
+    """Если модель не вернула текст — простые варианты по формулировке вопроса."""
+    q = (question or "").lower().replace("ё", "е")
+    if not q:
+        return []
+    if re.search(r"есть ли|имеет|имеется|у вас|уже", q):
+        if "почасов" in q:
+            return ["Да", "Нет", "Планируем внедрить"]
+        return ["Да", "Нет", "Не уверен"]
+    if re.search(r"днем|вечер|ноч|час", q) and re.search(r"когда|пик|нагруз", q):
+        return ["Днём", "Вечером", "Круглосуточно"]
+    if "ценов" in q and "категор" in q:
+        return ["1–2", "3–4", "5–6", "Не знаю"]
+    if re.search(r"мощност|присоедин", q):
+        return ["Меньше 750 кВт", "750 кВт – 20 МВт", "Больше 20 МВт"]
+    return []
+
+
 def _lead_for(messages: list[dict], sources: list[Source]) -> LeadDraft:
     if not client_is_ready(last_user_text(messages)):
         return LeadDraft()
@@ -251,8 +328,8 @@ def consult(
         else:
             text = write_answer(client, prepared, sources, fast=fast)
         text = normalize_answer(text, preserve_lines=chat_format)
-        if not suggestions:
-            suggestions = buttons_for(text, prepared)
+        if chat_format and not suggestions and not _is_escalation(text) and "?" in text:
+            suggestions = suggest_replies(client, text, fast=fast)
         suggestions = _dedupe_suggestions(suggestions)
         lead = _lead_for(prepared, sources)
         _remember(key, text, sources, suggestions, lead)
