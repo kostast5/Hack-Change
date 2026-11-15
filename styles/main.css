@@ -25,10 +25,12 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:18px 0;
 .switch input:checked+.track{background:var(--red)}
 .switch input:checked+.track::after{transform:translateX(16px)}
 .switch input:focus-visible+.track{outline:3px solid var(--red);outline-offset:2px}
-.btn,a.btn,a.btn:hover,a.btn:visited,a.btn:active{border:0;border-radius:999px;padding:12px 22px;font-weight:600;background:var(--red);color:#fff;transition:background .15s,transform .1s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
-.btn:hover{background:var(--red-d)} .btn:active{transform:scale(.97)}
-.btn.sec{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn.sec:hover{background:var(--red-l);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--red)}
+.btn,button.btn{border:0;border-radius:999px;padding:12px 22px;font-weight:600;background:var(--red);color:#fff;transition:background .15s,transform .1s;display:inline-flex;align-items:center;justify-content:center}
+a.btn{border:0;border-radius:999px;padding:12px 22px;font-weight:600;transition:background .15s,transform .1s;text-decoration:none!important;display:inline-flex;align-items:center;justify-content:center}
+.btn:not(.sec):hover,button.btn:not(.sec):hover,a.btn:not(.sec):hover{background:var(--red-d)}
+.btn:not(.sec):active,button.btn:not(.sec):active,a.btn:not(.sec):active{transform:scale(.97)}
+.btn.sec,button.btn.sec,a.btn.sec{background:var(--white);color:var(--ink)!important;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn.sec:hover,button.btn.sec:hover,a.btn.sec:hover{background:var(--red-l);color:var(--ink)!important;box-shadow:inset 0 0 0 1.5px var(--red)}
 .btn.sec:active{transform:scale(.97)}
 .btn:disabled{opacity:.45;cursor:default}
 aside{background:var(--white);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0}

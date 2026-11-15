@@ -38,7 +38,13 @@ _POWER_QUESTION = re.compile(
 _POWER_BAND = re.compile(
     r"меньше\s*750|менее\s*750|"
     r"750\s*квт\s*[–\-]\s*20|"
-    r"больше\s*20\s*мвт",
+    r"больше\s*20\s*мвт|"
+    r"\d+[\s,.]?\d*\s*мвт|"
+    r"\d+[\s,.]?\d*\s*квт",
+    re.I,
+)
+_NUM_UNIT = re.compile(
+    r"(\d[\d\s,.]*)\s*(мвт|mw|квт\s*·?\s*ч|квтч|квт|kw)\b",
     re.I,
 )
 
@@ -96,13 +102,17 @@ def retrieval_is_weak(question: str, facts: str, chunks) -> bool:
     return score < WEAK_SCORE
 
 
-def _monthly_kwh_from_dialog(messages: list[dict]) -> str:
-    """Число в ответ на вопрос про расход в кВт·ч — это расход, не мощность."""
+def _normalize_number(raw: str) -> str:
+    return raw.replace(" ", "").replace(",", ".").strip()
+
+
+def _consumption_line_from_dialog(messages: list[dict]) -> str:
+    """Ответ на вопрос про месячный расход (кВт·ч), в т.ч. с единицами и опечатками."""
     for index, msg in enumerate(messages):
         if msg.get("role") != "assistant":
             continue
         text = (msg.get("content") or "").lower().replace("ё", "е")
-        if not re.search(r"(квт\s*·?\s*ч|квтч)", text) and not (
+        if not re.search(r"квт\s*·?\s*ч|квтч", text) and not (
             "расход" in text and re.search(r"месяц|мес", text)
         ):
             continue
@@ -110,9 +120,96 @@ def _monthly_kwh_from_dialog(messages: list[dict]) -> str:
             if nxt.get("role") != "user":
                 continue
             raw = (nxt.get("content") or "").strip()
-            if re.fullmatch(r"\d{1,7}", raw):
-                return raw
+            if re.fullmatch(r"\d[\d\s]{0,9}", raw):
+                return f"месячный расход — {_normalize_number(raw)} кВт·ч (уже ответил)"
+            match = _NUM_UNIT.search(raw)
+            if match:
+                value = _normalize_number(match.group(1))
+                unit = match.group(2).lower().replace(" ", "")
+                if "мвт" in unit or unit == "mw":
+                    return (
+                        f"на вопрос про кВт·ч клиент написал {value} МВт — это мощность, не расход; "
+                        f"зафиксируй {value} МВт и не переспрашивай про месячный объём в кВт·ч"
+                    )
+                if "квтч" in unit or "квт·ч" in match.group(2).lower():
+                    return f"месячный расход — {value} кВт·ч (уже ответил)"
+                if unit.startswith("квт") or unit == "kw":
+                    return f"клиент указал {value} кВт (уточни при необходимости, но не повторяй тот же вопрос)"
+            elif raw:
+                return f"на вопрос про расход клиент ответил: «{raw[:80]}» (не переспрашивай дословно)"
             break
+    return ""
+
+
+def _monthly_kwh_from_dialog(messages: list[dict]) -> str:
+    line = _consumption_line_from_dialog(messages)
+    if not line:
+        return ""
+    if line.startswith("месячный расход"):
+        match = re.search(r"(\d[\d.]+)", line)
+        return match.group(1) if match else "1"
+    return "1"
+
+
+def _bill_from_dialog(messages: list[dict]) -> str:
+    for index, msg in enumerate(messages):
+        if msg.get("role") != "assistant":
+            continue
+        text = (msg.get("content") or "").lower().replace("ё", "е")
+        if not re.search(r"счет|счёт|сумм", text):
+            continue
+        for nxt in messages[index + 1 :]:
+            if nxt.get("role") != "user":
+                continue
+            raw = _normalize_number((nxt.get("content") or "").strip())
+            if re.fullmatch(r"\d+", raw):
+                return f"сумма в счёте — {raw} ₽"
+            break
+    return ""
+
+
+def _power_from_user_text(text: str) -> str:
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    blob = raw.lower().replace("ё", "е")
+    for label in POWER_BAND_BUTTONS:
+        if label.lower().replace("ё", "е") in blob:
+            return f"присоединённая мощность — {label}"
+    if re.search(r"меньше\s*750|менее\s*750", blob):
+        return "присоединённая мощность — меньше 750 кВт"
+    if re.search(r"750\s*квт", blob) and re.search(r"20\s*мвт", blob):
+        return "присоединённая мощность — 750 кВт – 20 МВт"
+    if re.search(r"больше\s*20", blob):
+        return "присоединённая мощность — больше 20 МВт"
+    if re.fullmatch(r"\d+", _normalize_number(blob)):
+        return ""
+    match = _NUM_UNIT.search(blob)
+    if not match:
+        return ""
+    unit = match.group(2).lower()
+    value = _normalize_number(match.group(1))
+    if "мвт" in unit or unit == "mw":
+        return f"присоединённая мощность — {value} МВт (уже указал)"
+    if unit.startswith("квт") and "ч" not in unit:
+        try:
+            kw = float(value)
+        except ValueError:
+            return ""
+        if kw < 750:
+            return "присоединённая мощность — меньше 750 кВт"
+        if kw <= 20_000:
+            return "присоединённая мощность — 750 кВт – 20 МВт"
+    return ""
+
+
+def _power_line_from_messages(messages: list[dict]) -> str:
+    for msg in reversed(messages):
+        if msg.get("role") != "user":
+            continue
+        line = _power_from_user_text(str(msg.get("content", "")))
+        if line:
+            return line
     return ""
 
 
@@ -134,22 +231,17 @@ def dialog_memory(messages: list[dict]) -> str:
     blob = " ".join(users).lower().replace("ё", "е")
     parts: list[str] = []
 
-    if user_already_named_power(messages):
-        for label in POWER_BAND_BUTTONS:
-            if label.lower().replace("ё", "е") in blob:
-                parts.append(f"присоединённая мощность — {label}")
-                break
-        else:
-            if re.search(r"меньше\s*750|менее\s*750", blob):
-                parts.append("присоединённая мощность — меньше 750 кВт")
-            elif re.search(r"750\s*квт", blob) and re.search(r"20\s*мвт", blob):
-                parts.append("присоединённая мощность — 750 кВт – 20 МВт")
-            elif re.search(r"больше\s*20", blob):
-                parts.append("присоединённая мощность — больше 20 МВт")
+    power = _power_line_from_messages(messages)
+    if power:
+        parts.append(power)
 
-    kwh = _monthly_kwh_from_dialog(messages)
-    if kwh:
-        parts.append(f"расход за месяц — {kwh} кВт·ч")
+    consumption = _consumption_line_from_dialog(messages)
+    if consumption:
+        parts.append(consumption)
+
+    bill = _bill_from_dialog(messages)
+    if bill:
+        parts.append(bill)
 
     category = _price_category_from_dialog(blob)
     if category:
@@ -158,7 +250,8 @@ def dialog_memory(messages: list[dict]) -> str:
     if not parts:
         return ""
     return (
-        "Уже известно от клиента (не переспрашивай и не начинай ответ с «понял, …»):\n"
+        "Уже известно от клиента (не переспрашивай то же самое; если факт уже есть — следующий шаг или вывод, "
+        "без повторного вопроса дословно):\n"
         + "\n".join(f"— {item}" for item in parts)
     )
 
@@ -349,7 +442,7 @@ def build_lead(messages: list[dict], sources: list[Source]) -> LeadDraft:
 
 def cache_key(messages: list[dict]) -> str:
     body = [{"role": message["role"], "content": message["content"]} for message in messages]
-    return "talk15\n" + LLM_MODEL + "\n" + json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+    return "talk16\n" + LLM_MODEL + "\n" + json.dumps(body, ensure_ascii=False, separators=(",", ":"))
 
 
 def _load_cache() -> dict[str, dict]:
