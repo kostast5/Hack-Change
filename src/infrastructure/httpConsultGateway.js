@@ -6,6 +6,17 @@ export class HttpConsultGateway {
     this.apiBase = apiBase;
   }
 
+  async fetchSuggestions(answer) {
+    const res = await fetch(`${this.apiBase}/api/suggestions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean) : [];
+  }
+
   async consult(messages) {
     const t0 = performance.now();
     const res = await fetch(`${this.apiBase}/api/consult`, {

@@ -377,7 +377,7 @@ def build_lead(messages: list[dict], sources: list[Source]) -> LeadDraft:
 
 def cache_key(messages: list[dict]) -> str:
     body = [{"role": message["role"], "content": message["content"]} for message in messages]
-    return "talk18\n" + LLM_MODEL + "\n" + json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+    return "talk19\n" + LLM_MODEL + "\n" + json.dumps(body, ensure_ascii=False, separators=(",", ":"))
 
 
 def _load_cache() -> dict[str, dict]:

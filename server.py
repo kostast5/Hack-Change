@@ -43,6 +43,10 @@ class ConsultRequest(BaseModel):
     messages: list[dict]
 
 
+class SuggestRequest(BaseModel):
+    answer: str
+
+
 def get_chunks():
     """База знаний грузится один раз, при первом вопросе."""
     global _chunks
@@ -123,6 +127,26 @@ def api_consult(req: ConsultRequest):
         "suggestions": [str(item) for item in getattr(result, "suggestions", []) or [] if str(item).strip()],
         "cached": bool(getattr(result, "cached", False)),
     }
+
+
+@app.post("/api/suggestions")
+def api_suggestions(req: SuggestRequest):
+    """Кнопки под ответом — отдельно от основного ответа, чтобы чат не ждал."""
+    if solution is None:
+        raise HTTPException(status_code=503, detail=f"solution.py не подключён: {IMPORT_ERROR}")
+    answer = (req.answer or "").strip()
+    if "?" not in answer:
+        return {"suggestions": []}
+    from consult import suggest_replies
+
+    client = solution.make_client()
+    try:
+        items = suggest_replies(client, answer, fast=True)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=solution.safe_error(exc))
+    finally:
+        client.close()
+    return {"suggestions": items}
 
 
 @app.post("/api/lead")

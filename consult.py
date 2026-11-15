@@ -196,8 +196,9 @@ def suggest_replies(client: httpx.Client, answer: str, *, fast: bool = False) ->
         "— только ответы, которые реально отвечают на ЭТОТ вопрос;\n"
         "— без нумерации и кавычек, до 8 слов в варианте;\n"
         "— один вариант на строку;\n"
-        "— если вопрос да/нет — варианты вроде «Да», «Нет», «Пока нет»;\n"
-        "— не подставляй диапазоны мощности, если вопрос не про мощность."
+        "— если вопрос «есть ли / у вас / имеется» — только «Да», «Нет» или «Пока нет», не периоды суток;\n"
+        "— «Днём / Вечером / Круглосуточно» — только если спрашивают, КОГДА больше нагрузка;\n"
+        "— диапазоны кВт/МВт — только если спрашивают про присоединённую мощность."
     )
     try:
         result = post(
@@ -241,11 +242,11 @@ def _fallback_suggestions(question: str) -> list[str]:
     q = (question or "").lower().replace("ё", "е")
     if not q:
         return []
-    if re.search(r"есть ли|имеет|имеется|у вас|уже", q):
-        if "почасов" in q:
-            return ["Да", "Нет", "Планируем внедрить"]
+    if "почасов" in q or ("учёт" in q and re.search(r"есть|име", q)):
+        return ["Да, есть", "Нет", "Планируем внедрить"]
+    if re.search(r"есть ли|имеется|имеет ли|у вас", q):
         return ["Да", "Нет", "Не уверен"]
-    if re.search(r"днем|вечер|ноч|час", q) and re.search(r"когда|пик|нагруз", q):
+    if re.search(r"когда|в какое время", q) and re.search(r"нагруз|потреб|пик|больше", q):
         return ["Днём", "Вечером", "Круглосуточно"]
     if "ценов" in q and "категор" in q:
         return ["1–2", "3–4", "5–6", "Не знаю"]
@@ -328,8 +329,6 @@ def consult(
         else:
             text = write_answer(client, prepared, sources, fast=fast)
         text = normalize_answer(text, preserve_lines=chat_format)
-        if chat_format and not suggestions and not _is_escalation(text) and "?" in text:
-            suggestions = suggest_replies(client, text, fast=fast)
         suggestions = _dedupe_suggestions(suggestions)
         lead = _lead_for(prepared, sources)
         _remember(key, text, sources, suggestions, lead)

@@ -17,15 +17,27 @@ export function addUserMessage(session, text, titleMaxLength = 48) {
 }
 
 export function addAssistantMessage(session, reply) {
+  const answer = reply.answer || '';
+  const cached = (reply.suggestions || []).filter(Boolean);
   session.messages.push({
     role: 'assistant',
-    content: reply.answer,
+    content: answer,
     sources: reply.sources || [],
-    suggestions: reply.suggestions || [],
+    suggestions: cached,
+    suggestionsPending: Boolean(reply.suggestionsPending),
     ms: reply.ms,
     mock: Boolean(reply.mock),
     cached: Boolean(reply.cached),
   });
+}
+
+export function patchLastAssistant(session, patch) {
+  for (let i = session.messages.length - 1; i >= 0; i -= 1) {
+    if (session.messages[i].role === 'assistant') {
+      Object.assign(session.messages[i], patch);
+      return;
+    }
+  }
 }
 
 export function addErrorMessage(session, text) {

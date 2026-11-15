@@ -114,6 +114,7 @@ form.in textarea:focus{border-color:var(--ink);outline:none}
   transition:background .15s,box-shadow .15s,transform .1s;
 }
 .chips button:hover{background:#f3f4f5;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink2);transform:translateY(-1px)}
+.chip-wait{font-size:13px;color:var(--mute);padding:6px 4px}
 .ask-lead{align-self:flex-start}
 .lead.done .btn{margin-top:4px}
 body.embed{background:#fff}

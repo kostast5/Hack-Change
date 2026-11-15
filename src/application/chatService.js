@@ -5,8 +5,8 @@
 
 import {
   LeadState, createSession, isEmpty, addUserMessage, addAssistantMessage,
-  addErrorMessage, offerLead, declineLead, markLeadSent, toPayload,
-} from '../domain/session.js?v=3';
+  addErrorMessage, offerLead, declineLead, markLeadSent, patchLastAssistant, toPayload,
+} from '../domain/session.js?v=4';
 
 export class ChatService {
   constructor({ consultGateway, leadGateway, repository, titleMaxLength = 48, debug = false }) {
@@ -145,11 +145,31 @@ export class ChatService {
 
     try {
       const reply = await this.consultGateway.consult(toPayload(session));
-      addAssistantMessage(session, reply);
+      const answer = reply.answer || '';
+      const hasCachedChips = (reply.suggestions || []).length > 0;
+      addAssistantMessage(session, {
+        ...reply,
+        suggestions: hasCachedChips ? reply.suggestions : [],
+        suggestionsPending: answer.includes('?') && !hasCachedChips,
+      });
       if (reply.lead) offerLead(session, reply.lead);
+      this.state.busy = false;
+      this.#commit();
+      if (answer.includes('?') && !hasCachedChips && this.consultGateway.fetchSuggestions) {
+        this.consultGateway.fetchSuggestions(answer).then((suggestions) => {
+          if (!this.current || this.current.id !== session.id) return;
+          patchLastAssistant(session, {
+            suggestions: suggestions || [],
+            suggestionsPending: false,
+          });
+          this.#commit();
+        }).catch(() => {
+          patchLastAssistant(session, { suggestionsPending: false });
+          this.#commit();
+        });
+      }
     } catch (e) {
       addErrorMessage(session, 'Не удалось получить ответ. Повторите сообщение или оставьте заявку.');
-    } finally {
       this.state.busy = false;
       this.#commit();
     }

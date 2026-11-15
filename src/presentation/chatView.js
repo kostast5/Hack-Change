@@ -1,7 +1,7 @@
 import { el } from './dom.js';
 import { renderDebugPanel } from './debugPanel.js?v=3';
 import { renderLeadCard, renderLeadDone } from './leadCard.js?v=9';
-import { LeadState } from '../domain/session.js?v=3';
+import { LeadState } from '../domain/session.js?v=4';
 
 function renderWelcome(demos, onDemo) {
   const box = el('div', 'empty');
@@ -52,15 +52,20 @@ export function renderChat(container, state, session, {
       container.append(node);
       if (state.debug) container.append(renderDebugPanel(m));
       const chips = m.suggestions || [];
-      if (!state.busy && m === lastAssistant && session.leadState === LeadState.NONE && chips.length) {
+      if (m === lastAssistant && session.leadState === LeadState.NONE) {
         const row = el('div', 'chips');
-        chips.forEach((label) => {
-          const btn = el('button', '', label);
-          btn.type = 'button';
-          btn.onclick = () => onQuick(label);
-          row.append(btn);
-        });
-        container.append(row);
+        if (chips.length) {
+          chips.forEach((label) => {
+            const btn = el('button', '', label);
+            btn.type = 'button';
+            btn.onclick = () => onQuick(label);
+            row.append(btn);
+          });
+        } else if (m.suggestionsPending) {
+          const wait = el('span', 'chip-wait', 'Варианты ответа…');
+          row.append(wait);
+        }
+        if (chips.length || m.suggestionsPending) container.append(row);
       }
     }
   });

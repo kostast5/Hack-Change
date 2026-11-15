@@ -2,7 +2,7 @@
 
 import { config } from './config.js?v=4';
 import { DEMOS } from './domain/demos.js?v=4';
-import { ChatService } from './application/chatService.js?v=10';
+import { ChatService } from './application/chatService.js?v=11';
 import { HttpConsultGateway, HttpLeadGateway } from './infrastructure/httpConsultGateway.js?v=4';
 import { LocalStorageRepository } from './infrastructure/localStorageRepository.js';
 import { renderHistory } from './presentation/historyView.js?v=3';
